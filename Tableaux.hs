@@ -53,6 +53,8 @@ arboliza x@(Conj a b) = alfaRegla x
 arboliza x@(Disy a b) = betaRegla x
 --Mete las conjunciones a un arbol
 alfaRegla :: Prop -> Tree Prop
+alfaRegla (Conj a (Var p)) = Branch (Conj a (Var p)) Empty (Branch (Var p) Empty (arboliza a))
+alfaRegla (Conj (Var p) a) = Branch (Conj (Var p) a) Empty (Branch (Var p) Empty (arboliza a))
 alfaRegla (Conj a b) = Branch (Conj a b) Empty (sumados)
   where sumados = suma (sacaDer(arboliza a)) (arboliza b)
 
