@@ -1,0 +1,1 @@
+Conj (Disy (Neg (Var "p")) (Var "r")) (Conj (Disy (Neg (Var "q")) (Var "r")) (Disy (Neg (Var "p")) (Var "q"))) 

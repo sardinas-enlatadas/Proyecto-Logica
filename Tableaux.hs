@@ -81,3 +81,20 @@ suma (Branch x Empty Empty) y = Branch x Empty y
 --La funcion que mete las disyunciones
 betaRegla ::Prop -> Tree Prop
 betaRegla (Disy a b) = Branch (Disy a b) (arboliza a) (arboliza b)
+
+----------------------------------------------------------------
+--Busca la proposicion en el arbol, si se encuentra devuelve el subarbol
+--Que contiene a ese elemento, si no, regresa 'Empty'
+busca :: Prop -> Tree Prop -> Tree Prop
+busca x Empty = error"El elemento no esta en el arbol"
+busca x (Branch a t1 t2)
+        |x == a =(Branch a t1 t2)
+        |esta x t1 = busca x t1
+        |esta x t2 = busca x t2
+        |otherwise = Empty
+
+inOrder:: Tree Prop -> [Prop]
+inOrder Empty = []
+inOrder (Branch (Var x) r l) = (inOrder r)++[(Var x)]++(inOrder l)
+inOrder (Branch (Neg(Var(x))) r l)=(inOrder r)++[Neg(Var x)]++(inOrder l)
+inOrder (Branch e r l)=(inOrder r)++(inOrder l)
