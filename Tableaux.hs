@@ -60,10 +60,10 @@ alfaRegla (Conj a b) = Branch (Conj a b) Empty (sumados)
 
 --Es una extension a la alfaRegla. La idea es que al ir agregando cada prop revise si su negacion ya pertenece al arbol
 --Aun es necesario meter la proposicion a revisar a mano en la consola para probarla
-alfaReglaExtendida :: Prop -> Tree Prop-> Bool
-alfaReglaExtendida _ Empty = True
-alfaReglaExtendida a (Branch b Empty Empty) = if (Neg a) == b then False else True
-alfaReglaExtendida a (Branch x t1 t2) =
+sigueAbierta :: Prop -> Tree Prop-> Bool
+sigueAbierta _ Empty = True
+sigueAbierta a (Branch b Empty Empty) = if (Neg a) == b then False else True
+sigueAbierta a (Branch x t1 t2) =
     if esta (Neg(a))  (Branch x t1 t2) then False else True
 --Es la funcion que sirve para buscar si una proposicion ya esta dentro del arbol
 esta :: Prop -> Tree Prop -> Bool
