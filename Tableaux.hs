@@ -96,15 +96,26 @@ fnn (Syss p q) = Conj (fnn (Impl p q)) (fnn (Impl q p))
   leaf x = Branch x Empty Empty
 -}
 --Manda a llamar a tableauxAux, que es el que trabaja con la formula en fnn
-tableaux :: Prop -> Bool
-tableaux a = tableauxAux (fnn a)
+tableaux :: Prop -> Tree Prop
+tableaux a = arboliza (fnn a)
 --Nos dice si la formula es satisfacible
-tableauxAux :: Prop -> Bool
-tableauxAux a = True
-ordena :: Prop -> Tree Prop
-ordena (Neg a) = leaf (Neg a)
-ordena (TTrue) = leaf TTrue
-ordena (FFalse) = leaf FFalse
-ordena (Var p) = leaf (Var p)
-ordena (Conj a b) = Branch (Conj a b) (Empty) (Branch a (Empty) (leaf b) )
-ordena (Disy a b) = Branch (Disy a b) (leaf a) (leaf b)
+arboliza :: Prop -> Tree Prop
+arboliza (Var p) = leaf (Var p)
+arboliza (TTrue) = leaf (TTrue)
+arboliza (FFalse) = leaf (FFalse)
+arboliza (Neg a) = leaf (Neg a)
+arboliza x@(Conj a b) = alfaRegla x
+
+alfaRegla :: Prop -> Tree Prop
+alfaRegla x@(Conj (Var p) (Var q))= Branch (x) Empty (Branch (Var p) Empty (leaf (Var q)))
+alfaRegla (Conj a b) = Branch (Conj a b) Empty (sumados)
+  where sumados = suma (sacaDer(arboliza a)) (arboliza b)
+--suma :: Tree Prop -> Tree Prop -> Tree Prop
+--suma x y = sacaDer x
+
+sacaDer :: Tree Prop ->Tree Prop
+sacaDer y@(Branch x Empty Empty) = y
+sacaDer (Branch x _ t2) = sacaDer t2
+
+suma :: Tree Prop -> Tree Prop ->Tree Prop
+suma (Branch x Empty Empty) y = Branch x Empty y
