@@ -41,64 +41,9 @@ fnn (Conj p q) = Conj (fnn p) (fnn q)
 fnn (Disy p q) = Disy (fnn p) (fnn q)
 fnn (Impl p q) = Disy (fnn (Neg p)) (fnn q)
 fnn (Syss p q) = Conj (fnn (Impl p q)) (fnn (Impl q p))
-{-
-  --Busca si en la lista que le pasan existe una formula estilo p ^ -p
-  --Si la encuentra devuelve True, si no, False
-  hayContradiccion :: [Prop]-> [Prop] -> Bool
-  hayContradiccion _ [] = False
-  hayContradiccion [] _ = False
-  hayContradiccion (a:as) l = if elem (Neg a) l then True else (hayContradiccion as l)
-  --Metodo principal. Es el que llamas a la hora de buscar si la lista de proposiciones es satisfacible ,
-  --Pasa la lista de props a fnn para que puedan ejecutarse las reglas alfa y beta.
-  tableaux :: Prop -> Bool
-  tableaux [] = True
-  tableaux (x:xs) = tableaux1(map (fnn) (x:xs))
-  --Recibe una lista de proposiciones y devuelve si existe un conjunto de estados tal que sea satisfacible
-  --Primero busca una contradiccion entre las variables libres dentro del conjunto. Si la encuentra, devuelve False
-  --Si no, manda a llamar a tableauxAux
-  tableaux1 :: [Prop] -> Bool
-  tableaux1 [] = True
-  tableaux1 (x:xs)
-    | hayContradiccion (x:xs) (x:xs) = False
-    | otherwise = tableauxAux (ordena (x:xs)) (ordena (x:xs))
-  --Recibe dos listas. La primera es sobre la que va a trabajar, la segunda es la lista completa de proposiciones originales
-  --Si se da el caso de que se reciba un Var p, manda a llamar a cierraRamas con la lista de proposiciones originales
-  --Si no es una variable, se manda a llamar recursivamente hasta que encuentre una Var
-  --Hay dos casos recursivos. Que haya una disyuncion o una conjuncion
-  -- Si hay una conjuncion busca que ambas ramas no se cierren
-  -- Si hay una disyuncion busca que por lo menos una se mantenga abierta
-  tableauxAux :: [Prop]-> [Prop] -> Bool
-  tableauxAux _ [] =True
-  tableauxAux [] _ = True
-  tableauxAux ((Var p):xs) l = not (cierraRamas (Var p) l) && tableauxAux xs l
-  tableauxAux ((Neg p):xs) l = cierraRamas (Neg p) l && tableauxAux xs l
-  tableauxAux ((Conj x@(Var a) y@(Var b)):xs) l = cierraRamas x l && cierraRamas y l && tableauxAux xs l
-  tableauxAux ((Conj x@(Var a) b):xs) l = (cierraRamas x l) && (tableauxAux f[b] l) && (tableauxAux xs l)
-  tableauxAux ((Conj a x@(Var b)):xs) l = tableauxAux [a] l && cierraRamas x l && tableauxAux xs l
-  tableauxAux ((Conj a b):xs) l = tableauxAux [a] l && tableauxAux [b] l && tableauxAux xs l
-  tableauxAux ((Disy x@(Var a) y@(Var b)):xs) l = cierraRamas x l || cierraRamas y l && tableauxAux xs l
-  tableauxAux ((Disy a x@(Var b) ):xs) l = tableauxAux [a] l || cierraRamas x l && tableauxAux xs  l
-  tableauxAux ((Disy x@(Var a) b):xs) l = cierraRamas x l || tableauxAux [b] l && tableauxAux xs l
-  tableauxAux ((Disy a b):xs) l= tableauxAux [a] l || tableauxAux [b] l && tableauxAux xs l
-  --Pone primero las variables, las conjunciones y al final las disyunciones
-  ordena:: [Prop] -> [Prop]
-  ordena [] = []
-  ordena ((Var p):xs )= (Var p):(ordena xs)
-  ordena ((Neg a):xs )= (Neg a):(ordena xs)
-  ordena ((Conj a b):xs )= (Conj a b):(ordena xs)
-  ordena ((Disy a b):xs) = (ordena xs)++[(Disy a b)]
-
-  --Devuelve True si la rama se cerro
-
-  cierraRamas :: Prop -> [Prop] -> Bool
-  cierraRamas x l = (elem (Neg x) l)
-  data Tree a = Empty | Branch a (Tree a) (Tree a) deriving (Show, Ord, Eq)
-  leaf x = Branch x Empty Empty
--}
---Manda a llamar a tableauxAux, que es el que trabaja con la formula en fnn
-tableaux :: Prop -> Tree Prop
-tableaux a = arboliza (fnn a)
---Nos dice si la formula es satisfacible
+--Pasa una proposicion a su forma de arbol. Supone que ya esta en fnn
+--Las conjunciones las mete en el arbol derecho, las disyunciones las divide en dos ramas.
+--Guarda la proposicion original como el nodo padre.
 arboliza :: Prop -> Tree Prop
 arboliza (Var p) = leaf (Var p)
 arboliza (TTrue) = leaf (TTrue)
@@ -106,19 +51,31 @@ arboliza (FFalse) = leaf (FFalse)
 arboliza (Neg a) = leaf (Neg a)
 arboliza x@(Conj a b) = alfaRegla x
 arboliza x@(Disy a b) = betaRegla x
+--Mete las conjunciones a un arbol
 alfaRegla :: Prop -> Tree Prop
---alfaRegla x@(Conj (Var p) (Var q))= Branch (x) Empty (Branch (Var p) Empty (leaf (Var q)))
 alfaRegla (Conj a b) = Branch (Conj a b) Empty (sumados)
   where sumados = suma (sacaDer(arboliza a)) (arboliza b)
---suma :: Tree Prop -> Tree Prop -> Tree Prop
---suma x y = sacaDer x
 
+--Es una extension a la alfaRegla. La idea es que al ir agregando cada prop revise si su negacion ya pertenece al arbol
+--Aun es necesario meter la proposicion a revisar a mano en la consola para probarla
+alfaReglaExtendida :: Prop -> Tree Prop-> Bool
+alfaReglaExtendida _ Empty = True
+alfaReglaExtendida a (Branch b Empty Empty) = if (Neg a) == b then False else True
+alfaReglaExtendida a (Branch x t1 t2) =
+    if esta (Neg(a))  (Branch x t1 t2) then False else True
+--Es la funcion que sirve para buscar si una proposicion ya esta dentro del arbol
+esta :: Prop -> Tree Prop -> Bool
+esta x Empty = False
+esta x (Branch a Empty Empty) = x == a
+esta x (Branch a t1 t2) = if x == a || esta x t1  || esta x t2 then True else False
+--Nos regresa el elemento mas a la derecha del arbol
 sacaDer :: Tree Prop ->Tree Prop
 sacaDer y@(Branch x Empty Empty) = y
 sacaDer (Branch x _ t2) = sacaDer t2
-
+--Le agrega un arbol completo en la rama derecha a un arbol. No fue necesario poner mas casos pues la unica funcion que manda a
+--llamar a esta funcion es la que mete conjunciones
 suma :: Tree Prop -> Tree Prop ->Tree Prop
 suma (Branch x Empty Empty) y = Branch x Empty y
-
+--La funcion que mete las disyunciones
 betaRegla ::Prop -> Tree Prop
 betaRegla (Disy a b) = Branch (Disy a b) (arboliza a) (arboliza b)
