@@ -105,9 +105,9 @@ arboliza (TTrue) = leaf (TTrue)
 arboliza (FFalse) = leaf (FFalse)
 arboliza (Neg a) = leaf (Neg a)
 arboliza x@(Conj a b) = alfaRegla x
-
+arboliza x@(Disy a b) = betaRegla x
 alfaRegla :: Prop -> Tree Prop
-alfaRegla x@(Conj (Var p) (Var q))= Branch (x) Empty (Branch (Var p) Empty (leaf (Var q)))
+--alfaRegla x@(Conj (Var p) (Var q))= Branch (x) Empty (Branch (Var p) Empty (leaf (Var q)))
 alfaRegla (Conj a b) = Branch (Conj a b) Empty (sumados)
   where sumados = suma (sacaDer(arboliza a)) (arboliza b)
 --suma :: Tree Prop -> Tree Prop -> Tree Prop
@@ -119,3 +119,6 @@ sacaDer (Branch x _ t2) = sacaDer t2
 
 suma :: Tree Prop -> Tree Prop ->Tree Prop
 suma (Branch x Empty Empty) y = Branch x Empty y
+
+betaRegla ::Prop -> Tree Prop
+betaRegla (Disy a b) = Branch (Disy a b) (arboliza a) (arboliza b)
