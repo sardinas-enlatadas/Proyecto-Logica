@@ -64,15 +64,31 @@ listaAtom (Neg(Var p)) = [[Neg(Var p)]]
 listaAtom (Conj a b)= listaAtom a ++ listaAtom b
 listaAtom (Disy a b)=listaAtom a ++ listaAtom b
 
+concatListas:: [[a]] ->[a]
+concatListas =concatMap (take 2)
+
 empaqueta:: Prop-> [[Prop]]->[[Prop]]
-empaqueta (TTrue) a = map (++[TTrue]) a
-empaqueta (FFalse) a= map (++[FFalse]) a
-empaqueta (Var p) a= map (++[(Var p)]) a
-empaqueta (Neg(Var p)) a = map (++[(Neg(Var p))]) a
---empaqueta (Disy (Var x) (Var y)) a = (map (++([(Var x)]++[(Var y)])) a)--(concat(a,(empaqueta x ))) `union`(concat( a, empaqueta y a))
-empaqueta (Conj (x) (y)) a = (map (++([x]++[y])) a)
+empaqueta (TTrue) a = map (`union`[TTrue]) a
+empaqueta (FFalse) a= map (`union`[FFalse]) a
+empaqueta (Var p) a= map (`union`[(Var p)]) a
+empaqueta (Neg(Var p)) a = map (`union`[(Neg(Var p))]) a
+empaqueta (Conj (x) (y)) a = (map (`union`(concatListas(empaqueta x a)`union`concatListas(empaqueta y a))) a)
 empaqueta (Disy x y) a = empaqueta x a ++ empaqueta y a
+--empaqueta (Disy (Var x) (Var y)) a = (map (++([(Var x)]++[(Var y)])) a)--(concat(a,(empaqueta x ))) `union`(concat( a, empaqueta y a))
 --empaqueta (Disy x y) a = union[(empaqueta x a),empaqueta y a]
 --empaqueta (Disy (Var x)(Var y)) =
 --empaqueta (Conj (x) (y)) a = empaqueta x a `union` empaqueta (y) a
 --map (map (++(empaqueta y a)) a) (map (++(empaqueta x a)) a)
+
+tauto :: Prop -> [[Prop]]
+tauto p= (empaqueta (fnn(fnn(Neg(p)))) (listaAtom(fnn(fnn(Neg(p))))))
+
+buscaNegado:: [Prop] -> Bool
+buscaNegado [] = False
+buscaNegado (x:xs)= if elem (fnn(Neg(x))) (xs)
+  then True
+  else buscaNegado (xs)
+--Devuelve True si todas las ramas estan cerradas
+tautologia :: Prop -> [Bool]
+--tautologia []=[]
+tautologia l= map (buscaNegado) (tauto l)
