@@ -65,19 +65,23 @@ sigueAbierta _ Empty = True
 sigueAbierta a (Branch b Empty Empty) = if (Neg a) == b then False else True
 sigueAbierta a (Branch x t1 t2) =
     if esta (Neg(a))  (Branch x t1 t2) then False else True
+
 --Es la funcion que sirve para buscar si una proposicion ya esta dentro del arbol
 esta :: Prop -> Tree Prop -> Bool
 esta x Empty = False
 esta x (Branch a Empty Empty) = x == a
 esta x (Branch a t1 t2) = if x == a || esta x t1  || esta x t2 then True else False
+
 --Nos regresa el elemento mas a la derecha del arbol
 sacaDer :: Tree Prop ->Tree Prop
 sacaDer y@(Branch x Empty Empty) = y
 sacaDer (Branch x _ t2) = sacaDer t2
+
 --Le agrega un arbol completo en la rama derecha a un arbol. No fue necesario poner mas casos pues la unica funcion que manda a
 --llamar a esta funcion es la que mete conjunciones
 suma :: Tree Prop -> Tree Prop ->Tree Prop
 suma (Branch x Empty Empty) y = Branch x Empty y
+
 --La funcion que mete las disyunciones
 betaRegla ::Prop -> Tree Prop
 betaRegla (Disy a b) = Branch (Disy a b) (arboliza a) (arboliza b)
@@ -93,8 +97,31 @@ busca x (Branch a t1 t2)
         |esta x t2 = busca x t2
         |otherwise = Empty
 
+colectaElementos :: Tree Prop -> [Prop]
+colectaElementos Empty = []
+colectaElementos (Branch TTrue t1 t2) = [TTrue] ++ colectaElementos t1 ++colectaElementos t2
+colectaElementos (Branch FFalse t1 t2) = [FFalse] ++ colectaElementos t1 ++colectaElementos t2
+colectaElementos (Branch (Var x) t1 t2) = [(Var x)] ++ colectaElementos t1 ++ colectaElementos t2
+colectaElementos (Branch (Neg(Var(x))) t1 t2)= [(Neg(Var(x)))]++ colectaElementos t1 ++ colectaElementos t2
+colectaElementos (Branch e t1 t2)= colectaElementos t1 ++ colectaElementos t2
+
+elimina:: (Eq a) => a->[a] -> [a]
+elimina e [] = []
+elimina e (x:xs)
+          |x==e = xs
+          |otherwise=[x] ++ elimina e (xs)
+
+revisarNegaciones:: [Prop]-> Tree Prop->[Bool]
+revisarNegaciones [] t = []
+revisarNegaciones (x:xs) (Branch e t1 t2) = [esta (Neg(x)) (busca x ((Branch e t1 t2)))]++revisarNegaciones (elimina (Neg(x)) (xs)) (Branch e t1 t2)
+
+tablo:: Prop -> [Bool]
+tablo p= revisarNegaciones (colectaElementos (arboliza (fnn(p)))) (arboliza(fnn(p)))
+--colectaElementos
+{-
 inOrder:: Tree Prop -> [Prop]
 inOrder Empty = []
 inOrder (Branch (Var x) r l) = (inOrder r)++[(Var x)]++(inOrder l)
 inOrder (Branch (Neg(Var(x))) r l)=(inOrder r)++[Neg(Var x)]++(inOrder l)
 inOrder (Branch e r l)=(inOrder r)++(inOrder l)
+-}
