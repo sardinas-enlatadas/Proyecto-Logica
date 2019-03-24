@@ -41,7 +41,7 @@ fnn (Syss p q) = Conj (fnn (Impl p q)) (fnn (Impl q p))
 data Tree a = Empty | Branch a (Tree a) (Tree a) deriving (Show, Ord, Eq)
 leaf x = Branch x Empty Empty
 --El dato Crumb nos guarda el nodo del que nos movimos (papa) y el arbol que no pudimos visitar
--- Por ejemplo, el LeftCrumb es el nodo padre y el arbol derecho que no visitamos
+-- Por ejemplo, el LeftCrumb lo que guarda el nodo padre y (Tree a) es el arbol derecho que no visitamos
 data Crumb a = LeftCrumb a (Tree a) | RightCrumb a (Tree a) deriving (Show)
 --Tanto BreadCrumbs como Zipper son azucar sintactico
 --BreadCrumbs es para guardar un camino hasta la raiz
@@ -78,21 +78,20 @@ esta :: Prop -> Tree Prop -> Bool
 esta x Empty = False
 esta x (Branch a Empty Empty) = x == a
 esta x (Branch a t1 t2) = if x == a || esta x t1  || esta x t2 then True else False
---Nos regresa el elemento mas a la derecha del arbol
-sacaDer :: Tree Prop ->Prop
-sacaDer Empty = TTrue
-sacaDer y@(Branch x Empty Empty) = x
-sacaDer (Branch x _ t2) = sacaDer t2
 --Le agrega un arbol completo en la rama derecha a un arbol.
 --llamar a esta funcion es la que mete conjunciones
 suma :: Tree Prop -> Tree Prop ->Tree Prop
 suma (Branch x Empty Empty) y = Branch x Empty y
-suma (Branch a t1 t2) y = Branch a t1 (suma t2 y)
-
+suma (Branch a Empty t2) y = Branch a Empty (suma t2 y)
+suma (Branch a t1 t2) y = Branch a (suma t1 y) (suma t2 y)
 --La funcion que mete las disyunciones
 betaRegla ::Prop -> Tree Prop
 betaRegla (Disy a b) = Branch (Disy a b) (arboliza a) (arboliza b)
 
+sacarRamas :: Tree Prop -> [Tree Prop]
+sacarRamas Empty = []
+sacarRamas (Branch x Empty Empty) = [(Branch x Empty Empty)]
+sacarRamas (Branch a t1 t2)= (sacarRamas t1) ++ (sacarRamas t2)
 moverseArriba :: Zipper a -> Zipper a
 moverseArriba (t, LeftCrumb x r:bs) = (Branch x t r, bs)
 moverseArriba (t, RightCrumb x l:bs) = (Branch x l t, bs)
