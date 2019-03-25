@@ -112,6 +112,7 @@ betaReglaZipp (Disy a b) = ((Branch (Disy a b) (arboliza a) (arboliza b)),[])
 --Recibe un Zipper Prop y regresa una lista que contiene todas las hojas que hay desde ese punto y para abajo.
 --Esta funcion es de las mas importantes pues es con estas hojas son con las que vamos a trabajar.
 --Ya que son Zipper Prop tambien guarda todo el recorrido desde la proposicion actual Hasta la Raiz
+--Pusimos LeftCrumb a Empty y RightCrumb a Empty, pues no nos importa el arbol "hermano"
 sacarRamas :: Zipper Prop -> [Zipper Prop]
 sacarRamas (Empty,z) = []
 sacarRamas ( y@(Branch x Empty Empty),z) = [(y, z)]
