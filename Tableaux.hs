@@ -97,14 +97,21 @@ betaReglaZipp (Disy a b) = ((Branch (Disy a b) (arboliza a) (arboliza b)),[])
 sacarRamas :: Zipper Prop -> [Zipper Prop]
 sacarRamas (Empty,z) = []
 sacarRamas ( y@(Branch x Empty Empty),z) = [(y, z)]
-sacarRamas (((Branch a t1 t2),zs)) = (sacarRamas (t1,(RightCrumb a t2):zs) )  ++ (sacarRamas (t2, ((LeftCrumb a t1):zs) ) )
+--sacarRamas ((Branch (Var p) t1 t2),zs) = [ ((Branch (Var p) Empty Empty),zs)] ++ (sacarRamas (t1,(LeftCrumb (Var p) Empty):zs) )  ++ (sacarRamas (t2, ((RightCrumb (Var p) Empty):zs) ) )
+--sacarRamas ((Branch (Neg a) t1 t2),zs) = [ ((Branch (Neg a) Empty Empty),zs)] ++ (sacarRamas (t1,(LeftCrumb (Neg a) Empty):zs) )  ++ (sacarRamas (t2, ((RightCrumb ( Neg a) Empty):zs) ) )
+sacarRamas (((Branch a t1 t2),zs)) = (sacarRamas (t1,(LeftCrumb a Empty):zs) )  ++ (sacarRamas (t2, ((RightCrumb a Empty):zs) ) )
 
 moverseArriba :: Zipper a -> Zipper a
 moverseArriba (t, LeftCrumb x r:bs) = (Branch x t r, bs)
 moverseArriba (t, RightCrumb x l:bs) = (Branch x l t, bs)
 
-sacaElemActual :: Zipper a ->  a
+sacaElemActual :: Zipper Prop ->  Prop
+sacaElemActual (Empty,x) = FFalse
 sacaElemActual ((Branch x _ _),_) = x
+
+sacaElemActualT :: Tree Prop -> Prop
+sacaElemActualT Empty = FFalse
+sacaElemActualT (Branch a _ _ )= a
 {-
 data Crumb a = LeftCrumb a (Tree a) | RightCrumb a (Tree a) deriving (Show)
 type BreadCrumbs a = [Crumb a]
@@ -114,8 +121,36 @@ type Zipper a= (Tree a, BreadCrumbs a)
 --Aun es necesario meter la proposicion a revisar a mano en la consola para probarla
 sigueAbierta :: Zipper Prop-> Bool
 sigueAbierta (_,[]) = True
-sigueAbierta y@((Branch a Empty Empty), (x:xs)) =
+sigueAbierta y@((Branch a t1 t2), (x:xs)) =
   if a == (Neg (sacaElemActual (moverseArriba (y) ) ) ) then False
-  else sigueAbierta ((Branch a Empty Empty), xs)
+  else sigueAbierta ((Branch a Empty Empty), (xs)) && sigueAbierta(moverseArriba y)
+enlistaPadres :: Zipper Prop -> [Prop]
+enlistaPadres (_,[]) = []
+enlistaPadres (t, ((RightCrumb x l):xs) ) = (sacaElemActualT t):x:(enlistaPadres (Empty, xs))
+enlistaPadres (t, ((LeftCrumb x l):xs)) = (sacaElemActualT t):x:(enlistaPadres (Empty, xs))
+
+sigueAbierta2:: [Prop]->Bool
+sigueAbierta2 [] = True
+sigueAbierta2 xs = sigueAbierta2Aux xs xs
+
+sigueAbierta2Aux :: [Prop]-> [Prop] -> Bool
+sigueAbierta2Aux [] _ = True
+sigueAbierta2Aux (x:xs) [] = True
+sigueAbierta2Aux (x:xs) z = if elem (fnn(Neg x)) z then False else sigueAbierta2Aux xs z
+
+satisfacible2 :: Prop -> Bool
+satisfacible2 a = elem True (map (sigueAbierta2) (map (enlistaPadres) (sacarRamas(zipperiza (fnn (fnn a ))) ) ))
+
+tautologia2 :: Prop -> Bool
+tautologia2 a = not (satisfacible2 (fnn (fnn(Neg a))))
+
 satisfacible :: Prop -> Bool
-satisfacible a = elem True (map (sigueAbierta ) ( sacarRamas(zipperiza(fnn a)) ))
+satisfacible a = elem True (map (sigueAbierta ) ( sacarRamas(zipperiza(fnn(fnn   a))) ))
+
+satisfacibleAux :: Prop -> [Bool]
+satisfacibleAux a = (map (sigueAbierta ) ( sacarRamas(zipperiza(fnn(fnn (fnn  a)))) ))
+tautologiaAux :: Prop -> [Bool]
+tautologiaAux a = (map (sigueAbierta) (sacarRamas (zipperiza (fnn(fnn (Neg a) ))))  )
+
+tautologia :: Prop -> Bool
+tautologia a = not (elem True (map (sigueAbierta) (sacarRamas (zipperiza (fnn (fnn(fnn (Neg a) )))))  ) )
