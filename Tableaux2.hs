@@ -21,17 +21,6 @@ instance Show Prop where
     show (Impl p q) = "(" ++ show p ++ " → " ++ show q ++ ")" -- (P → Q)
     show (Syss p q) = "(" ++ show p ++ " ↔ " ++ show q ++ ")" -- (P ↔ Q)
 
-{-FlexibleInstances Show [Prop] where
-    show [TTrue] = "[ True ]" -- T
-    show [FFalse] = "[ False ]" -- F
-    show [(Var x)] = "[ "++ x ++" ]" -- P
-    show [(Neg p)] = "[¬ " ++ show p ++" ]" -- ¬ P
-    show [(Conj p q)] = "[(" ++ show p ++ " ∧ " ++ show q ++ ")]" -- (P ∧ Q)
-    show [(Disy p q)] = "[(" ++ show p ++ " ∨ " ++ show q ++ ")]" -- (P ∨ Q)
-    show [(Impl p q)] = "[(" ++ show p ++ " → " ++ show q ++ ")]" -- (P → Q)
-    show [(Syss p q)] = "[(" ++ show p ++ " ↔ " ++ show q ++ ")]" -- (P ↔ Q)
--}
-
 fnn :: Prop -> Prop
 fnn TTrue = TTrue
 fnn FFalse = FFalse
@@ -47,15 +36,7 @@ fnn (Conj p q) = Conj (fnn p) (fnn q)
 fnn (Disy p q) = Disy (fnn p) (fnn q)
 fnn (Impl p q) = Disy (fnn (Neg p)) (fnn q)
 fnn (Syss p q) = Conj (fnn (Impl p q)) (fnn (Impl q p))
-{-
-enlistaProp:: Prop-> [Prop]
-enlistaProp (TTrue) =[TTrue]
-enlistaProp (FFalse)= [FFalse]
-enlistaProp (Var p)= [Var p]
-enlistaProp (Neg(Var p)) = [Neg(Var p)]
-enlistaProp (Conj a b) = [(Conj a b)]++enlistaProp a ++ enlistaProp b
-enlistaProp (Disy a b) = [(Disy a b)]++enlistaProp a ++ enlistaProp b
--}
+
 listaAtom :: Prop -> [[Prop]]
 listaAtom (TTrue) =[[TTrue]]
 listaAtom (FFalse)= [[FFalse]]
@@ -72,13 +53,8 @@ empaqueta (TTrue) a = map (`union`[TTrue]) a
 empaqueta (FFalse) a= map (`union`[FFalse]) a
 empaqueta (Var p) a= map (`union`[(Var p)]) a
 empaqueta (Neg(Var p)) a = map (`union`[(Neg(Var p))]) a
-empaqueta (Conj (x) (y)) a = (map (`union`(concatListas(empaqueta x a)`union`concatListas(empaqueta y a))) a)
 empaqueta (Disy x y) a = empaqueta x a ++ empaqueta y a
---empaqueta (Disy (Var x) (Var y)) a = (map (++([(Var x)]++[(Var y)])) a)--(concat(a,(empaqueta x ))) `union`(concat( a, empaqueta y a))
---empaqueta (Disy x y) a = union[(empaqueta x a),empaqueta y a]
---empaqueta (Disy (Var x)(Var y)) =
---empaqueta (Conj (x) (y)) a = empaqueta x a `union` empaqueta (y) a
---map (map (++(empaqueta y a)) a) (map (++(empaqueta x a)) a)
+empaqueta (Conj x y) a = (map (`union`(concatListas(empaqueta x a)`union`concatListas(empaqueta y a))) a)
 
 tauto :: Prop -> [[Prop]]
 tauto p= (empaqueta (fnn(fnn(Neg(p)))) (listaAtom(fnn(fnn(Neg(p))))))
@@ -92,3 +68,7 @@ buscaNegado (x:xs)= if elem (fnn(Neg(x))) (xs)
 tautologia :: Prop -> [Bool]
 --tautologia []=[]
 tautologia l= map (buscaNegado) (tauto l)
+
+tautologia1::[Bool]->Bool
+tautologia1 []=True
+tautologia1 (x:xs)= x && tautologia1 (xs)
