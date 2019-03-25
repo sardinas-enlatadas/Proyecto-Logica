@@ -59,6 +59,15 @@ arboliza (FFalse) = leaf (FFalse)
 arboliza (Neg a) = leaf (Neg a)
 arboliza x@(Conj a b) = alfaRegla x
 arboliza x@(Disy a b) = betaRegla x
+
+zipperiza :: Prop -> Zipper Prop
+zipperiza (Var p) = (leaf (Var p), [])
+zipperiza (TTrue) = (leaf (TTrue),[])
+zipperiza (FFalse) = (leaf (FFalse),[])
+zipperiza (Neg a) = (leaf (Neg a),[])
+zipperiza x@(Conj a b) = alfaReglaZipp x
+zipperiza x@(Disy a b) = betaReglaZipp x
+
 --Mete las conjunciones a un arbol
 alfaRegla :: Prop -> Tree Prop
 alfaRegla (Conj a (Var p)) = Branch (Conj a (Var p)) Empty (Branch (Var p) Empty (arboliza a))
@@ -66,18 +75,11 @@ alfaRegla (Conj (Var p) a) = Branch (Conj (Var p) a) Empty (Branch (Var p) Empty
 alfaRegla (Conj a b) = Branch (Conj a b) Empty (sumados)
   where sumados = suma (arboliza a) (arboliza b)
 
---Es una extension a la alfaRegla. La idea es que al ir agregando cada prop revise si su negacion ya pertenece al arbol
---Aun es necesario meter la proposicion a revisar a mano en la consola para probarla
-sigueAbierta :: Prop -> Tree Prop-> Bool
-sigueAbierta _ Empty = True
-sigueAbierta a (Branch b Empty Empty) = if (Neg a) == b then False else True
-sigueAbierta a (Branch x t1 t2) =
-    if esta (Neg(a))  (Branch x t1 t2) then False else True
---Es la funcion que sirve para busca r si una proposicion ya esta dentro del arbol
-esta :: Prop -> Tree Prop -> Bool
-esta x Empty = False
-esta x (Branch a Empty Empty) = x == a
-esta x (Branch a t1 t2) = if x == a || esta x t1  || esta x t2 then True else False
+alfaReglaZipp :: Prop -> Zipper Prop
+alfaReglaZipp (Conj a (Var p)) = (Branch (Conj a (Var p)) Empty (Branch (Var p) Empty (arboliza a)),[])
+alfaReglaZipp (Conj (Var p) a) = (Branch (Conj (Var p) a) Empty (Branch (Var p) Empty (arboliza a)),[])
+alfaReglaZipp (Conj a b) =( Branch (Conj a b) Empty (sumados),[])
+  where sumados = suma (arboliza a) (arboliza b)
 --Le agrega un arbol completo en la rama derecha a un arbol.
 --llamar a esta funcion es la que mete conjunciones
 suma :: Tree Prop -> Tree Prop ->Tree Prop
@@ -88,10 +90,67 @@ suma (Branch a t1 t2) y = Branch a (suma t1 y) (suma t2 y)
 betaRegla ::Prop -> Tree Prop
 betaRegla (Disy a b) = Branch (Disy a b) (arboliza a) (arboliza b)
 
-sacarRamas :: Tree Prop -> [Tree Prop]
-sacarRamas Empty = []
-sacarRamas (Branch x Empty Empty) = [(Branch x Empty Empty)]
-sacarRamas (Branch a t1 t2)= (sacarRamas t1) ++ (sacarRamas t2)
+betaReglaZipp :: Prop -> Zipper Prop
+betaReglaZipp (Disy a b) = ((Branch (Disy a b) (arboliza a) (arboliza b)),[])
+
+
+sacarRamas :: Zipper Prop -> [Zipper Prop]
+sacarRamas (Empty,z) = []
+sacarRamas ( y@(Branch x Empty Empty),z) = [(y, z)]
+--sacarRamas ((Branch (Var p) t1 t2),zs) = [ ((Branch (Var p) Empty Empty),zs)] ++ (sacarRamas (t1,(LeftCrumb (Var p) Empty):zs) )  ++ (sacarRamas (t2, ((RightCrumb (Var p) Empty):zs) ) )
+--sacarRamas ((Branch (Neg a) t1 t2),zs) = [ ((Branch (Neg a) Empty Empty),zs)] ++ (sacarRamas (t1,(LeftCrumb (Neg a) Empty):zs) )  ++ (sacarRamas (t2, ((RightCrumb ( Neg a) Empty):zs) ) )
+sacarRamas (((Branch a t1 t2),zs)) = (sacarRamas (t1,(LeftCrumb a Empty):zs) )  ++ (sacarRamas (t2, ((RightCrumb a Empty):zs) ) )
+
 moverseArriba :: Zipper a -> Zipper a
 moverseArriba (t, LeftCrumb x r:bs) = (Branch x t r, bs)
 moverseArriba (t, RightCrumb x l:bs) = (Branch x l t, bs)
+
+sacaElemActual :: Zipper Prop ->  Prop
+sacaElemActual (Empty,x) = FFalse
+sacaElemActual ((Branch x _ _),_) = x
+
+sacaElemActualT :: Tree Prop -> Prop
+sacaElemActualT Empty = FFalse
+sacaElemActualT (Branch a _ _ )= a
+{-
+data Crumb a = LeftCrumb a (Tree a) | RightCrumb a (Tree a) deriving (Show)
+type BreadCrumbs a = [Crumb a]
+type Zipper a= (Tree a, BreadCrumbs a)
+-}
+--Es una extension a la alfaRegla. La idea es que al ir agregando cada prop revise si su negacion ya pertenece al arbol
+--Aun es necesario meter la proposicion a revisar a mano en la consola para probarla
+sigueAbierta :: Zipper Prop-> Bool
+sigueAbierta (_,[]) = True
+sigueAbierta y@((Branch a t1 t2), (x:xs)) =
+  if a == (Neg (sacaElemActual (moverseArriba (y) ) ) ) then False
+  else sigueAbierta ((Branch a Empty Empty), (xs)) && sigueAbierta(moverseArriba y)
+enlistaPadres :: Zipper Prop -> [Prop]
+enlistaPadres (_,[]) = []
+enlistaPadres (t, ((RightCrumb x l):xs) ) = (sacaElemActualT t):x:(enlistaPadres (Empty, xs))
+enlistaPadres (t, ((LeftCrumb x l):xs)) = (sacaElemActualT t):x:(enlistaPadres (Empty, xs))
+
+sigueAbierta2:: [Prop]->Bool
+sigueAbierta2 [] = True
+sigueAbierta2 xs = sigueAbierta2Aux xs xs
+
+sigueAbierta2Aux :: [Prop]-> [Prop] -> Bool
+sigueAbierta2Aux [] _ = True
+sigueAbierta2Aux (x:xs) [] = True
+sigueAbierta2Aux (x:xs) z = if elem (fnn(Neg x)) z then False else sigueAbierta2Aux xs z
+
+satisfacible2 :: Prop -> Bool
+satisfacible2 a = elem True (map (sigueAbierta2) (map (enlistaPadres) (sacarRamas(zipperiza (fnn (fnn a ))) ) ))
+
+tautologia2 :: Prop -> Bool
+tautologia2 a = not (satisfacible2 (fnn (fnn(Neg a))))
+
+satisfacible :: Prop -> Bool
+satisfacible a = elem True (map (sigueAbierta ) ( sacarRamas(zipperiza(fnn(fnn   a))) ))
+
+satisfacibleAux :: Prop -> [Bool]
+satisfacibleAux a = (map (sigueAbierta ) ( sacarRamas(zipperiza(fnn(fnn (fnn  a)))) ))
+tautologiaAux :: Prop -> [Bool]
+tautologiaAux a = (map (sigueAbierta) (sacarRamas (zipperiza (fnn(fnn (Neg a) ))))  )
+
+tautologia :: Prop -> Bool
+tautologia a = not (elem True (map (sigueAbierta) (sacarRamas (zipperiza (fnn (fnn(fnn (Neg a) )))))  ) )
